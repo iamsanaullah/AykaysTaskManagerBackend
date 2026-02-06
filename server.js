@@ -12,7 +12,7 @@ const app = express();
 // Middleware
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://aykaystaskmanagerbackend.onrender.com/'
+  'https://aykaystaskmanagerbackend.onrender.com'
 ];
 
 app.use(cors({
