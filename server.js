@@ -9,23 +9,35 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// Allowed frontend origins
 const allowedOrigins = [
-  'http://localhost:3000',
-  'https://aykays-task-manager.netlify.app'
+  'http://localhost:3000',                   // local dev
+  'https://aykays-task-manager.netlify.app' // deployed frontend
 ];
 
+// ✅ CORS middleware applied BEFORE routes
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function(origin, callback) {
+    // allow requests like Postman / curl (no origin)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
-// Handle preflight requests
+// Handle preflight OPTIONS requests
 app.options('*', cors());
+
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Simple logging middleware
+// Logging
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
@@ -40,12 +52,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// 404 handler - FIXED: Use regex or specific path
-app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: `Cannot ${req.method} ${req.originalUrl}`
-  });
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: `Cannot ${req.method} ${req.originalUrl}` });
 });
 
 // Error handler
@@ -61,8 +70,8 @@ app.use((err, req, res, next) => {
 // MongoDB connection
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmanager');
-    console.log('✅ MongoDB connected successfully');
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ MongoDB connected');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
     process.exit(1);
@@ -73,5 +82,5 @@ const connectDB = async () => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   await connectDB();
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
